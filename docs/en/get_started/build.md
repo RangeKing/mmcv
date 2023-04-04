@@ -327,3 +327,108 @@ Firstly, you need to apply for an IPU cloud machine, see [here](https://www.grap
 1. Build MMCV
 
 2. Use pip to install sdk according to [IPU PyTorch document](https://docs.graphcore.ai/projects/poptorch-user-guide/en/latest/installation.html). Also, you need to apply for machine and sdk to Graphcore.
+
+### Build mmcv-full on Ascend NPU machine
+
+Before building mmcv-full, `torch_npu` should be installed. See the complete installation tutorial [PyTorch Installation Guide](https://gitee.com/ascend/pytorch/blob/master/docs/en/PyTorch%20Installation%20Guide/PyTorch%20Installation%20Guide.md)
+
+#### Option 1: Install mmcv-full with pip
+
+The Ascend compiled version of mmcv-full is already supported when the version of mmcv >= 1.7.0, we can pip install directly
+
+```bash
+pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/ascend/torch1.8.0/index.html
+```
+
+#### Option 2: Build mmcv-full NPU (Ascend) from Source
+
+- Pull the source code
+
+```bash
+git pull https://github.com/open-mmlab/mmcv/tree/master
+```
+
+- Build
+
+```bash
+MMCV_WITH_OPS=1 MAX_JOBS=8 FORCE_NPU=1 python setup.py build_ext
+```
+
+- Install
+
+```bash
+MMCV_WITH_OPS=1 FORCE_NPU=1 python setup.py develop
+```
+
+#### Test Case
+
+```python
+import torch
+import torch_npu
+from mmcv.ops import softmax_focal_loss
+
+# Init tensor to the NPU
+x = torch.randn(3, 10).npu()
+y = torch.tensor([1, 5, 3]).npu()
+w = torch.ones(10).float().npu()
+
+output = softmax_focal_loss(x, y, 2.0, 0.25, w, 'none')
+print(output)
+```
+
+### Build mmcv-full on Cambricon MLU Devices
+
+#### Install torch_mlu
+
+##### Option1: Install mmcv-full based on Cambricon docker image
+
+Firstly, install and pull Cambricon docker image (please email service@cambricon.com for the latest release docker):
+
+```bash
+docker pull ${docker image}
+```
+
+Run and attach to the docker, [Install mmcv-full on MLU device](#install-mmcv\-full-on-cambricon-mlu-device) and [make sure you've installed mmcv-full on MLU device successfully](#test-code)
+
+##### Option2: Install mmcv-full from compiling Cambricon PyTorch source code
+
+Please email service@cambricon.com or contact with Cambricon engineers for a suitable version of CATCH package. After you get the suitable version of CATCH package, please follow the steps in ${CATCH-path}/CONTRIBUTING.md to install Cambricon PyTorch.
+
+#### Install mmcv-full on Cambricon MLU device
+
+Clone the repo
+
+```bash
+git clone https://github.com/open-mmlab/mmcv.git
+```
+
+The mlu-ops library will be downloaded to the default directory (mmcv/mlu-ops) while building MMCV. You can also set `MMCV_MLU_OPS_PATH` to an existing mlu-ops library before building as follows:
+
+```bash
+export MMCV_MLU_OPS_PATH=/xxx/xxx/mlu-ops
+```
+
+Install mmcv-full
+
+```bash
+cd mmcv
+export MMCV_WITH_OPS=1
+export FORCE_MLU=1
+python setup.py install
+```
+
+#### Test Code
+
+After finishing previous steps, you can run the following python code to make sure that you've installed mmcv-full on MLU device successfully
+
+```python
+import torch
+import torch_mlu
+from mmcv.ops import sigmoid_focal_loss
+x = torch.randn(3, 10).mlu()
+x.requires_grad = True
+y = torch.tensor([1, 5, 3]).mlu()
+w = torch.ones(10).float().mlu()
+output = sigmoid_focal_loss(x, y, 2.0, 0.25, w, 'none')
+print(output)
+```
